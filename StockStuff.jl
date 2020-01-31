@@ -10,6 +10,7 @@ using Dates
 # using PyPlot
 
 
+
 function AlphaVantage_API_call(datafunction, symbol, outputsize)
     dataDir = "/Users/riomcmahon/Programming/ryssdal_jl/stockdata"
     dataDirContents = readdir(dataDir)
@@ -87,6 +88,8 @@ function ProcessJSON(stockDict, stockIDs, position)
 end
 
 function PlotStockPrices(timehistory, stockIDs)
+    # this function basically accepts a dictionary based on date and IDs for labeling
+    # to
     # initialize empty array for plotting and add dict data in
     keyarray = keys(timehistory)
     plotdim = [length(keyarray), size(stockIDs)[1]]
@@ -113,10 +116,12 @@ function PlotStockPrices(timehistory, stockIDs)
         push!(dates, Date(key))
     end
 
-
-
-
-    pa = plot(dates, plotvect, title="Stock Price Time History", label=labels)
+    numxticks = convert(Int, floor(length(dates)*0.1))
+    pa = plot(dates, plotvect, title="Stock Price Time History",
+             label=labels,
+             xticks=numxticks,
+             xrotation=-60,
+             tickfontsize=6)
     ylabel!("Stock Value (\$)")
     xlabel!("Date")
     display(pa)
@@ -127,8 +132,8 @@ end
 
 function main()
     # list of stocks you want in a dictionary
-    stockIDs = ["LYFT",
-                "UBER"]
+    stockIDs = ["GLD",
+                "GDX"]
 
     # parameters to pass to API call, reference https://www.alphavantage.co/documentation/ for alternate params
     API_call_params = ["TIME_SERIES_DAILY",

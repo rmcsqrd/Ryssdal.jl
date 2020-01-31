@@ -2,11 +2,18 @@
     "Meta Data": {
         "1. Information": "Daily Prices (open, high, low, close) and Volumes",
         "2. Symbol": "GOOG",
-        "3. Last Refreshed": "2020-01-30",
+        "3. Last Refreshed": "2020-01-31 11:56:22",
         "4. Output Size": "Full size",
         "5. Time Zone": "US/Eastern"
     },
     "Time Series (Daily)": {
+        "2020-01-31": {
+            "1. open": "1468.9000",
+            "2. high": "1470.1300",
+            "3. low": "1432.3731",
+            "4. close": "1438.4300",
+            "5. volume": "822227"
+        },
         "2020-01-30": {
             "1. open": "1439.9600",
             "2. high": "1457.2800",
