@@ -4,6 +4,7 @@
 - when it reads if the file or not compare the time stamp of the most recent data vs current state
 	maybe use the date in the filename and compare it to Dates.today() because Julia is sick and 
 	allows for comparisons like that
+- add market cap viewing option
 
 ## Math Stuff
 - look at stats for different stocks (mean, covariance, etc) and plot that
