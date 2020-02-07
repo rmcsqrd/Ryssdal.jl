@@ -2,11 +2,32 @@
     "Meta Data": {
         "1. Information": "Daily Prices (open, high, low, close) and Volumes",
         "2. Symbol": "UBER",
-        "3. Last Refreshed": "2020-02-04",
+        "3. Last Refreshed": "2020-02-07 14:31:21",
         "4. Output Size": "Full size",
         "5. Time Zone": "US/Eastern"
     },
     "Time Series (Daily)": {
+        "2020-02-07": {
+            "1. open": "39.9800",
+            "2. high": "41.0000",
+            "3. low": "36.5000",
+            "4. close": "40.4600",
+            "5. volume": "93580341"
+        },
+        "2020-02-06": {
+            "1. open": "37.3000",
+            "2. high": "37.3900",
+            "3. low": "36.7300",
+            "4. close": "37.0900",
+            "5. volume": "51692672"
+        },
+        "2020-02-05": {
+            "1. open": "38.8900",
+            "2. high": "38.9700",
+            "3. low": "36.7350",
+            "4. close": "36.8100",
+            "5. volume": "38376359"
+        },
         "2020-02-04": {
             "1. open": "37.8700",
             "2. high": "38.9900",
