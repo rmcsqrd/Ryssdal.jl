@@ -58,7 +58,7 @@ function JSON_File_Process(location, type, data)
     end
 end
 
-function ProcessJSON(stockDict, stockIDs, position)
+function ProcessJSON(stockDict::Any, stockIDs::Any, positionParam::String, dateRange::Array=["none"])
     # determine which data set is largest
     seriesParam = collect(keys(stockDict[stockIDs[1]]))[1] # will return something like "Time Series (Daily)"
     stockSize = []
@@ -75,14 +75,24 @@ function ProcessJSON(stockDict, stockIDs, position)
         tempkey = collect(key)[1]
         for (cnt, ID) in enumerate(stockIDs)
             try
-                value = stockDict[stockIDs[cnt]][seriesParam][tempkey][position]
+                value = stockDict[stockIDs[cnt]][seriesParam][tempkey][positionParam]
+
                 push!(temparray, parse(Float64,value))
             catch e
                 value = NaN
                 push!(temparray, value)
             end
         end
-        combinedStockData[String(tempkey)] = temparray
+        # check if dateRange provided
+        if dateRange[1] == "none"
+            combinedStockData[String(tempkey)] = temparray
+        else
+            # if date range is provided, only append items within range
+            if Dates.Date(tempkey)>Dates.Date(dateRange[1]) && Dates.Date(tempkey)<Dates.Date(dateRange[2])
+                combinedStockData[String(tempkey)] = temparray
+            else
+            end
+        end
     end
     return combinedStockData
 end
@@ -95,6 +105,7 @@ function PlotStockPrices(timehistory, stockIDs)
     plotdim = [length(keyarray), size(stockIDs)[1]]
     plotarray = Array{Any}(undef, plotdim[1], plotdim[2])
     step = range(1,step=1,length = plotdim[1])
+
 
     # generate data to plot
     for (k, key) in enumerate(sort(collect(keys(timehistory))))
@@ -116,40 +127,47 @@ function PlotStockPrices(timehistory, stockIDs)
         push!(dates, Date(key))
     end
 
-    numxticks = convert(Int, floor(length(dates)*0.1))
+    numxticks = convert(Int, floor(length(dates)*0.1))  # arbitrary magic number for scaling
     pa = plot(dates, plotvect, title="Stock Price Time History",
              label=labels,
              xticks=numxticks,
              xrotation=-60,
-             tickfontsize=6)
+             tickfontsize=6,
+             legend=:topleft)
     ylabel!("Stock Value (\$)")
     xlabel!("Date")
     display(pa)
 
-
-
 end
+
 
 function main()
     # list of stocks you want in a dictionary
-    stockIDs = ["GLD",
-                "GDX"]
+    # cointegrated-looking pairs (MCD, YUM), (UBER,LYFT)
+    stockIDs = ["GOOG",
+                "AMZN"]
 
     # parameters to pass to API call, reference https://www.alphavantage.co/documentation/ for alternate params
     API_call_params = ["TIME_SERIES_DAILY",
                         "full",
                         "4. close"]
 
+    # [min, max], must follow "YYYY-MM-DD" format (also can be "max" for all data)
+    dateRange = ["2018-01-01","2020-01-31"]
+
+
     # make API call based on IDs/params
     stockDict = Dict()  # intialize empty dictionary
     for stockID in stockIDs
         stockDict["$stockID"] = AlphaVantage_API_call(API_call_params[1], stockID, API_call_params[2])
     end
+    print("API Call Complete","\n")
 
     # process data to be massaged
-    timehistoryDict = ProcessJSON(stockDict, stockIDs, API_call_params[3])
+    timehistoryDict = ProcessJSON(stockDict, stockIDs, API_call_params[3], dateRange)
+    print("JSON Massaging Complete","\n")
     PlotStockPrices(timehistoryDict, stockIDs)
-
+    print("Plotting Complete","\n")
 end
 
 main()
