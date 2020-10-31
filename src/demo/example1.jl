@@ -7,11 +7,12 @@ function example1()
     # API CALL DEMO
     # list of stocks you want in a dictionary
     # cointegrated-looking pairs (MCD, YUM), (UBER,LYFT)
+    # NOTE: more than 5 API calls per minute will exceed free API limits
     stockIDs = ["TSLA",
                 #"GOOG",
                 "GOLD",
                 #"AMZN",
-                "UBER",
+                #"UBER",
                "ZM",
                "LYFT",
                "AAPL"]

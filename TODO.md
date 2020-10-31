@@ -1,13 +1,12 @@
 ## Package Functionality
-- probably refactor everything so each function is its own file - THIS SHOULD BE DONE ASAP
 - fix absolute positioning for dataDir variable in AlphaVantage_API_Call
 - when it reads if the file or not compare the time stamp of the most recent data vs current state
 	maybe use the date in the filename and compare it to Dates.today() because Julia is sick and 
 	allows for comparisons like that
 - add market cap viewing option
 - fix graphing max date because it goes past data values
-- TSLA, AAPL data is not right, other stuff seems okay
-- shit plots weird if time histories are different - add function to find longest time history then do that one first. also figure out truncate mode
+- add in error handling if you exceed API free limits (5 calls per minute)
+
 
 ## Math Stuff
 - look at stats for different stocks (mean, covariance, etc) and plot that
@@ -23,11 +22,5 @@
 ## Cosmetic Stuff
 - subplots with stationarity, etc (maybe display on main plot as well with shaded areas and stuff)
 - some sort of nice looking gui interface with drop downs and such
-- figure out why plots.jl adds a huge amount of white space on either side of the data
 
-## Deployment Stuff
-- Figure out which web hosting framework you want to use, docker on free Azure for 12mo might should be enough time to get a job
-- how to host? IPYNB? docker image and Genie? find an example
-
-## wishlist
 
