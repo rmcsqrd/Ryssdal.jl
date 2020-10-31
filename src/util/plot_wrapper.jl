@@ -56,5 +56,7 @@ function PlotStockPrices(timehistory; truncate=false)
         numxticks = max(numxticks, convert(Int, floor(length(date_data)*0.1)))  
     end
     plot!(xticks = numxticks)
+    xlabel!("Date")
+    ylabel!("Split Adjusted Share Price (\$)")
     display(pa)
 end

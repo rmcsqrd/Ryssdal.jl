@@ -24,9 +24,7 @@ function example1()
     # make API call based on IDs/params
     stockDict = Dict()  # intialize empty dictionary
     for stockID in stockIDs
-        stockDict["$stockID"] = AlphaVantage_API_call(API_call_params.function_name, 
-                                                      stockID, 
-                                                      API_call_params.output_size)
+        stockDict["$stockID"] = AlphaVantage_API_call(API_call_params.function_name, stockID,API_call_params.output_size)
     end
     print("API Call Complete","\n")
 
