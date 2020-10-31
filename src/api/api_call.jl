@@ -1,5 +1,6 @@
 using HTTP
 using JSON
+using Random
 
 
 """
@@ -15,7 +16,7 @@ using JSON
     OUTPUT:
     responseJSON = (JSON of data) results to be unpacked
 """
-function AlphaVantage_API_call(datafunction, symbol, outputsize; apikey="cat", newcall=false)
+function AlphaVantage_API_call(datafunction, symbol, outputsize; apikey="RANDOM", newcall=false)
     dataDir = string(@__DIR__,"/stockdata")
     dataDirContents = readdir(dataDir)
     notSaved = false
@@ -35,6 +36,9 @@ function AlphaVantage_API_call(datafunction, symbol, outputsize; apikey="cat", n
         end
     end
 
+    if apikey == "RANDOM"
+        apikey = randstring(10)
+    end
 
     # make API call if data is not saved
     if notSaved == true 
