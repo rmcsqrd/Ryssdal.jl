@@ -5,6 +5,9 @@
 	maybe use the date in the filename and compare it to Dates.today() because Julia is sick and 
 	allows for comparisons like that
 - add market cap viewing option
+- fix graphing max date because it goes past data values
+- TSLA, AAPL data is not right, other stuff seems okay
+- shit plots weird if time histories are different - add function to find longest time history then do that one first. also figure out truncate mode
 
 ## Math Stuff
 - look at stats for different stocks (mean, covariance, etc) and plot that
