@@ -75,3 +75,15 @@ function example3(p, c)
     KellyCriterion(p,c)
 
 end
+
+function example4(TICKER, p)
+    timehistoryDict = example1()
+
+    series = []
+    for date in sort(collect(keys(timehistoryDict[TICKER])))
+        push!(series, parse(Float64, timehistoryDict[TICKER][date]))
+    end
+
+    # do AR-net stuff
+    ARnet(series, p)
+end
