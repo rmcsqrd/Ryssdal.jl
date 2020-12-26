@@ -15,7 +15,8 @@ function example1()
                 #"UBER",
                "ZM",
                "LYFT",
-               "AAPL"]
+               "AAPL",
+               "HTZGQ"]
     API_call_params = API_Types("Daily_Adjusted")
 
     # [min, max], must follow "YYYY-MM-DD" format (also can be "max" for all data)
@@ -36,7 +37,7 @@ function example1()
                                   API_call_params.time_type, 
                                   dateRange)
     print("JSON Massaging Complete","\n")
-    PlotStockPrices(timehistoryDict)
+    #PlotStockPrices(timehistoryDict)
     print("Plotting Complete","\n")
     return timehistoryDict
 
@@ -76,14 +77,70 @@ function example3(p, c)
 
 end
 
-function example4(TICKER, p)
+function example4(TICKERS, p)
+    # example input in REPL
+    #   ryssdal.example4(["TSLA", "AAPL"], 10)
+    
     timehistoryDict = example1()
+    
+    # determine shortest history
+    minlen = Inf
+    for symbol in TICKERS
+        if length(keys(timehistoryDict[symbol])) < minlen
+            minlen = length(keys(timehistoryDict[symbol]))
+        end
+    end
 
-    series = []
-    for date in sort(collect(keys(timehistoryDict[TICKER])))
-        push!(series, parse(Float64, timehistoryDict[TICKER][date]))
+    # initialize (n x k_min) empty array to store vals (k_min is minlen)
+    # loop through ticker symbols, then loop through dates in dict
+    series = zeros(length(TICKERS), minlen)
+    for (tick_id, tick_symb) in enumerate(TICKERS)
+        dates = sort(collect(keys(timehistoryDict[tick_symb])))
+
+        # reverse operations trade of O(n) operations to avoid
+        #   index cluster precipitated by different dict lengths
+        reverse!(dates)  
+        
+        for (cnt, date) in enumerate(dates)
+            if cnt <= minlen
+                series[tick_id, cnt] = parse(Float64, timehistoryDict[tick_symb][date])
+            end
+        end
+        series[tick_id, :] = reverse(series[tick_id, :])
     end
 
     # do AR-net stuff
-    ARnet(series, p)
+    w_i, c, data = ARnetWrapper(series, p)
+    
+    # compute stuff from VAR(p) process
+    n = length(TICKERS)
+    k = size(series)[2]
+    VARp_data = zeros(n, k-p)
+    # I think you need to let the process run from the initial point
+    for (k, item) in enumerate(data)
+        y_t = zeros(n)
+        y_t += c
+        for i in 1:size(item[1])[2]
+            y_i = item[1][:, i]
+            y_t += w_i[i]*y_i
+        end
+        VARp_data[:, k] = y_t
+    end
+    
+    #truth_data = series[:, 1:p]
+    #VARp_data = [truth_data VARp_data]
+
+    # append with NaN stuff for pretty plotting
+    filler = zeros(n,p)
+    replace!(filler, 0=>NaN)
+    VARp_data = [VARp_data filler]
+
+    # plot stuff
+    plt = plot()
+    for (tick_id, tick_symb) in enumerate(TICKERS)
+        plot!(series[tick_id,:], label=tick_symb, legend=:topleft)
+        plot!(VARp_data[tick_id,:], label="$tick_symb VAR(p)")
+    end
+    display(plt)
+    
 end
