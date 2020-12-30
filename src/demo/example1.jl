@@ -9,10 +9,10 @@ function example1()
     # cointegrated-looking pairs (MCD, YUM), (UBER,LYFT)
     # NOTE: more than 5 API calls per minute will exceed free API limits
     stockIDs = ["TSLA",
-                #"GOOG",
+                "GOOG",
                 "GOLD",
-                #"AMZN",
-                #"UBER",
+                "AMZN",
+                "UBER",
                "ZM",
                "LYFT",
                "AAPL",
@@ -111,6 +111,8 @@ function example4(TICKERS, p)
 
     # do AR-net stuff
     w_i, c, data = ARnetWrapper(series, p)
+    println(w_i)
+    println(c)
     
     # compute stuff from VAR(p) process
     n = length(TICKERS)
@@ -118,6 +120,9 @@ function example4(TICKERS, p)
     VARp_data = zeros(n, k-p)
     # I think you need to let the process run from the initial point
     for (k, item) in enumerate(data)
+        #println(w_i)
+        #println(item[1])
+        #println(c, "\n")
         y_t = zeros(n)
         y_t += c
         for i in 1:size(item[1])[2]
@@ -129,11 +134,16 @@ function example4(TICKERS, p)
     
     #truth_data = series[:, 1:p]
     #VARp_data = [truth_data VARp_data]
+    #for i in 1:k-p
+    #    data = VARp_data[:, i:i+p-1]
+    #    y_t = zeros(n)
+    #    y_t += c
+    #    for (j, data_j) in enumerate(data)
+    #        y_t .+= w_i[j]*data_j
+    #    end
+    #    VARp_data[:, i+p] = y_t
+    #end
 
-    # append with NaN stuff for pretty plotting
-    filler = zeros(n,p)
-    replace!(filler, 0=>NaN)
-    VARp_data = [VARp_data filler]
 
     # plot stuff
     plt = plot()

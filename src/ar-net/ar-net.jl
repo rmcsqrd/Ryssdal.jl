@@ -21,11 +21,12 @@ end
 function ARnet(data, p)
     # set model hyper params
     num_iters = 1000
-    learn_rate = 0.00000001
+    learn_rate = 0.0001
     noise_scale = 0.1
 
     # setup model components
-    opt = Descent(learn_rate)
+    #opt = Descent(learn_rate)
+    opt = ADAM(learn_rate, (0.9, 0.8))
     n, k = size(data[1][1])
 
     # setup ar-net stuff
@@ -46,7 +47,9 @@ function ARnet(data, p)
     # set loss function
     function loss(y_thist,y_res)
         yhat = ar_eval(y_thist)
-        sum((y_res .- yhat).^2)
+        lossval = sum((y_res .- yhat).^2)
+        lossval = mse(yhat, y_res)
+        return lossval
     end
 
     # train weights and intercept

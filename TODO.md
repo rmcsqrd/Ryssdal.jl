@@ -8,6 +8,7 @@
 - add in error handling if you exceed API free limits (5 calls per minute)
 - move API to yahoo via https://github.com/JuliaQuant/MarketData.jl- add in fred API via https://github.com/markushhh/FredApi.jl
 - figure out if TimeSeries.jl is useful
+- convert to 
 
 ## Math Stuff
 - look at stats for different stocks (mean, covariance, etc) and plot that
