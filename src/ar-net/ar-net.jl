@@ -1,7 +1,8 @@
 using Flux
 using Flux.Optimise
 using Flux.Losses
-using TimeSeries, MarketData
+using TimeSeries
+using MarketData
 using ProgressMeter
 using DataFrames
 using Plots
@@ -18,7 +19,7 @@ using Markdown
 """
 function ARnet(symb_list::Array{Symbol};
                       p=1,
-                      num_iters=100,
+                      num_iters=10,
                       start_date=Date(2020,1,1),
                       end_date=Date(2021,1,11),
                      )
@@ -50,16 +51,17 @@ function ARnet(symb_list::Array{Symbol};
     w_i, c = ARnetTrain(data, p, num_iters=num_iters)
 
     # BONE - break this out into a "reconstitute" function and a plot util function
-    
+    # reconstitute data
+    sim_data = ARnetReconstitute(mdata_list, w_i, c, p)
+
+    # combine sim data with market data, create labels, and plot
+    push!(mdata_list, sim_data)
+    labels = [string(symb) for symb in symb_list]
+    push!(labels, "AR($p) simulated data")
+    TimeSeriesPlot(mdata_list, labels)
 
     # BONE - stuff below this is fucked
 
-    # reconstitute data
-    sim_data = zeros(length(mdata)-p)  # bone, this is 1D vect, not array. this is going to be huge pita for multivariate
-    for i in 1:length(mdata)-p
-        seed_data = values(percentchange(mdata)[i:p+i-1].AdjClose)
-        sim_data[i] = dot(seed_data, w_i)+c[1]
-    end
     # plot stuff - this is percent change
     plt = plot(percentchange(mdata).AdjClose)
     dates = timestamp(mdata)
@@ -209,4 +211,50 @@ function ARnetTrain(data, p; num_iters=1000)
     return w_i, c_intercept
 end
 
-function ARnetReconstitute(
+function ARnetReconstitute(mdata_list, w_i, c, p)
+
+    # BONE - I haven't touched this yet
+    
+    # weights/intercept were trained on percent change (pc) data so we want to reconstitute the same
+    pc_mdata_list = []
+    for mdata in mdata_list
+        push!(pc_mdata_list, percentchange(mdata))
+    end
+    
+    # figure out number of series included (n) and length of raw time series (k)
+    n = length(pc_mdata_list)
+    k = length(pc_mdata_list[1])  # all pc_mdata series have same length
+
+    # reconstitute data
+    #   first, create empty container to populate
+    #   next, get first p time series data points as seed data
+    #   finally, simulate forward
+    sim_data = zeros(n, k)
+
+    for (mdata_idx, pc_mdata) in enumerate(pc_mdata_list)
+        sim_data[mdata_idx,1:p] = values(pc_mdata[1:p].AdjClose)
+    end
+
+    # loop through lag data
+    for t in p+1:k
+
+        # get lag data and create lazy temporary container
+        # do lazy weight multiplication in a for loop
+        lag_data = sim_data[:, t-p:t-1]
+        for p_i in 1:p
+            sim_data[:, t] += w_i[p_i, :, :]*lag_data[:, p_i]
+        end
+        sim_data[:, t] += c
+    end
+
+    # create list of time histories with data
+    sim_timestamps = timestamp(pc_mdata_list[1])
+    sim_data_list = []
+    for i in 1:n
+        data = (date = sim_timestamps, 
+                AdjClose = sim_data[i,:]
+                )
+        push!(sim_data_list, TimeArray(data; timestamp=:date, meta="Example"))
+    end
+    return sim_data_list
+end

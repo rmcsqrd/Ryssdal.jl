@@ -13,5 +13,6 @@ include("ar-net/ar-net.jl")
 
 # utilities
 include("util/stats.jl")
+include("util/plot_utils.jl")
 
 end # module
