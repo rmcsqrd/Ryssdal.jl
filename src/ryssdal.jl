@@ -4,14 +4,14 @@ using Revise
 
 ## internal
 
-include("api/api_call.jl")
-include("api/api_types.jl")
+# example stuff
 include("demo/example1.jl")
-include("util/plot_wrapper.jl")
-include("util/stats.jl")
-include("ar-net/1D_linreg_ex.jl")
+include("demo/1D_linreg_ex.jl")
+
+# ARnet training stuff
 include("ar-net/ar-net.jl")
 
-
+# utilities
+include("util/stats.jl")
 
 end # module
