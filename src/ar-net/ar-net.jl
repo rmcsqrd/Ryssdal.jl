@@ -19,16 +19,18 @@ using Markdown
 """
 function ARnet(symb_list::Array{Symbol};
                       p=1,
-                      num_iters=10,
+                      num_iters=1000,
                       start_date=Date(2020,1,1),
                       end_date=Date(2021,1,11),
                      )
     
     # get marketdata and store dataframes in a list
+    pc_mdata_list = []
     mdata_list = []
-    for symb in symb_list
+    initial_values = zeros(length(symb_list), 1)
+    for (symb_idx, symb) in enumerate(symb_list)
 
-        # get market data
+        # get percent change market data
         mdata = yahoo(symb)
 
         # truncate data according to date range
@@ -38,11 +40,13 @@ function ARnet(symb_list::Array{Symbol};
             error("Specified date range outside of time history")
         end
         mdata = to(from(mdata, start_date), end_date)
+        initial_values[symb_idx, 1] = values(mdata[1].AdjClose)[1]
+        push!(pc_mdata_list, percentchange(mdata))
         push!(mdata_list, mdata)
     end
 
     # create AR(p) data
-    ARdata = ARdataPrep(mdata_list, p)
+    ARdata = ARdataPrep(pc_mdata_list, p)
     
     # create list of data by zipping lag/result values
     data = collect(zip(ARdata.LagValues, ARdata.ResultValues))
@@ -50,46 +54,22 @@ function ARnet(symb_list::Array{Symbol};
     # train model
     w_i, c = ARnetTrain(data, p, num_iters=num_iters)
 
-    # BONE - break this out into a "reconstitute" function and a plot util function
     # reconstitute data
-    sim_data = ARnetReconstitute(mdata_list, w_i, c, p)
+    sim_mdata_list = ARnetReconstitute(pc_mdata_list, w_i, c, p, initial_values)
 
     # combine sim data with market data, create labels, and plot
-    push!(mdata_list, sim_data)
-    labels = [string(symb) for symb in symb_list]
-    push!(labels, "AR($p) simulated data")
-    TimeSeriesPlot(mdata_list, labels)
-
-    # BONE - stuff below this is fucked
-
-    # plot stuff - this is percent change
-    plt = plot(percentchange(mdata).AdjClose)
-    dates = timestamp(mdata)
-    data = (datetime = dates,
-            Open = zeros(length(mdata)),
-            High = zeros(length(mdata)),
-            Low = zeros(length(mdata)),
-            Close = zeros(length(mdata)),
-            AdjClose = [zeros(p); sim_data])
-    ts = TimeArray(data; timestamp = :datetime, meta = "Example")
-    plot!(ts.AdjClose, label="AdjClose from AR($p) Simulation")
-    display(plt)
-
-    # plot stuff - this is AR simulation into real numbers
-    truth_data = values(mdata.AdjClose)
-    ARdata = []
-    for i in 1:p
-        append!(ARdata, 0)
+    plot_list = []
+    label_list = []
+    for i in 1:length(mdata_list)
+        sub_plot_list = [mdata_list[i], sim_mdata_list[i]]
+        push!(plot_list, sub_plot_list)
+        sub_label_list = [string(symb_list[i]), string(string(symb_list[i]), " AR($p) Simulated")]
+        push!(label_list, sub_label_list)
     end
-    append!(ARdata, truth_data[1])
-    for (cnt, val) in enumerate(values(ts.AdjClose))
-        append!(ARdata, ARdata[cnt+p]+ARdata[cnt+p]*val)  # bone, idk if this is right
-    end
-    plt = plot(truth_data)
-    plot!(ARdata)
-    display(plt)
-
-
+    plot_labels = PlotLabels("AR($p) Simulation", 
+                             "Date", 
+                             "Adjusted Close % Change")
+    TimeSeriesARSimPlot(plot_list, label_list, plot_labels)
 
 end
 
@@ -114,15 +94,9 @@ function ARdataPrep(mdata_list, p)
     # these lists are date only so will be lists of (1 x p) and (1 x 1)
     # this will result in two ordered lists: the ith entry of lag_dates is some date in the time series. The ith entry in result_dates is the corresponding list of p lag dates.
     
-    # we want to deal with percent change (pc) data
-    pc_mdata_list = []
-    for mdata in mdata_list
-        push!(pc_mdata_list, percentchange(mdata))
-    end
-
     lag_dates = []
     result_dates = []
-    rev_timestamps = reverse(timestamp(pc_mdata_list[1]))
+    rev_timestamps = reverse(timestamp(mdata_list[1]))
     
     for date_index in 1:length(rev_timestamps)-p
         push!(lag_dates, reverse(rev_timestamps[date_index+1:date_index+p]))  # "de-reverse"
@@ -140,8 +114,8 @@ function ARdataPrep(mdata_list, p)
     n = length(mdata_list)
     
     for i in 1:length(lag_dates)  # loop through list of dates
-        pc_result_value = zeros(n, 1)  # pc=percent change, nx1 array of time series value
-        pc_lag_value = zeros(n, p)  # pc = percent change, nxp array of corresponding lag values
+        result_value = zeros(n, 1)  # nx1 array of time series value
+        lag_value = zeros(n, p)  #  nxp array of corresponding lag values
 
         for j in 1:n  # loop through time histories 1:n
             lag_date = lag_dates[i]
@@ -149,14 +123,14 @@ function ARdataPrep(mdata_list, p)
             
             # get adjusted close value of time series j at specific date.
             # 1 index is because result is stored in array
-            pc_result_value[j, 1] = values(pc_mdata_list[j][result_date].AdjClose)[1] 
+            result_value[j, 1] = values(mdata_list[j][result_date].AdjClose)[1] 
 
             for (date_idx, date) in enumerate(lag_date)
-                pc_lag_value[j, date_idx] = values(pc_mdata_list[j][date].AdjClose)[1]  
+                lag_value[j, date_idx] = values(mdata_list[j][date].AdjClose)[1]  
             end
         end
-        push!(lag_values, pc_lag_value)
-        push!(result_values, pc_result_value)
+        push!(lag_values, lag_value)
+        push!(result_values, result_value)
 
     end
 
@@ -211,19 +185,11 @@ function ARnetTrain(data, p; num_iters=1000)
     return w_i, c_intercept
 end
 
-function ARnetReconstitute(mdata_list, w_i, c, p)
+function ARnetReconstitute(mdata_list, w_i, c, p, initial_values)
 
-    # BONE - I haven't touched this yet
-    
-    # weights/intercept were trained on percent change (pc) data so we want to reconstitute the same
-    pc_mdata_list = []
-    for mdata in mdata_list
-        push!(pc_mdata_list, percentchange(mdata))
-    end
-    
     # figure out number of series included (n) and length of raw time series (k)
-    n = length(pc_mdata_list)
-    k = length(pc_mdata_list[1])  # all pc_mdata series have same length
+    n = length(mdata_list)
+    k = length(mdata_list[1])  # all pc_mdata series have same length
 
     # reconstitute data
     #   first, create empty container to populate
@@ -231,8 +197,8 @@ function ARnetReconstitute(mdata_list, w_i, c, p)
     #   finally, simulate forward
     sim_data = zeros(n, k)
 
-    for (mdata_idx, pc_mdata) in enumerate(pc_mdata_list)
-        sim_data[mdata_idx,1:p] = values(pc_mdata[1:p].AdjClose)
+    for (mdata_idx, mdata) in enumerate(mdata_list)
+        sim_data[mdata_idx,1:p] = values(mdata[1:p].AdjClose)
     end
 
     # loop through lag data
@@ -248,7 +214,7 @@ function ARnetReconstitute(mdata_list, w_i, c, p)
     end
 
     # create list of time histories with data
-    sim_timestamps = timestamp(pc_mdata_list[1])
+    sim_timestamps = timestamp(mdata_list[1])
     sim_data_list = []
     for i in 1:n
         data = (date = sim_timestamps, 
