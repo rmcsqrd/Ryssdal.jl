@@ -16,3 +16,37 @@ function TimeSeriesARSimPlot(timeseries_list, label_list, plot_labels)
         end
     end
 end
+
+function PlotWSBData(timeseries_list, label_list, plot_labels; overwrite=true)
+    if overwrite == true
+        plot(layout=(1,1))
+    end
+    for (ts_idx, timeseries) in enumerate(timeseries_list)
+        plot!(timeseries,
+              label=label_list[ts_idx],
+              #seriestype=:scatter,  # looks okay
+              seriestype=:bar,  # too dense with year of data
+              fillalpha=0.25,
+              #seriestype=:line,  # looks okay for smaller time intervals
+              #marker=:circle,
+              #markeralpha=0.75,
+              #markersize=2,
+              legend=:topleft,
+             )
+    end
+    title!(plot_labels.title)
+    xlabel!(plot_labels.xlabel)
+    ylabel!(plot_labels.ylabel)
+end
+
+function PlotStockData(timeseries_list, label_list, plot_labels)
+    combined_series = MergeSeries(timeseries_list)
+    plot!(twinx(), 
+          combined_series,
+          legend=:top,
+          label="",
+          yaxis=:log,
+          ylabel=plot_labels.ylabel,
+         )
+    title!(plot_labels.title)
+end

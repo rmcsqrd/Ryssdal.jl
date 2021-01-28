@@ -2,6 +2,7 @@ using DataFrames
 using CSV
 using ProgressMeter
 using Dates
+using Plots
 
 # df = DataFrame(CSV.File("aux/data/WSB_POSTS_MAX1611770383_MIN1580147972.csv"))
 
@@ -10,8 +11,6 @@ mutable struct StockCounter
     total_hits::Int
     hit_time_hist
 end
-
-
 
 function ParseWSBData(path)
     
@@ -30,15 +29,14 @@ function ParseWSBData(path)
     stock_counter_dict = Dict()
 
     # create time history container for hits
-    max_time = floor(unix2datetime(df.created_utc[1]), Day(1))
-    min_time = floor(unix2datetime(df.created_utc[length(df.created_utc)]), Day(1))
+    max_time = Date(unix2datetime(df.created_utc[1]))
+    min_time = Date(unix2datetime(df.created_utc[length(df.created_utc)]))
     time_range = min_time:Day(1):max_time
-    time_array = Dict(zip(time_range, [0 for x in time_range]))
 
     # top level loop: loop through all title content
-    @showprogress for post in eachrow(df)#bone, remove this
+    @showprogress for post in eachrow(df)
         candidate_list = TitleParse(post.title)
-        post_date = floor(unix2datetime(post.created_utc), Day(1))
+        post_date = Date(unix2datetime(post.created_utc))
         
         # loop through candidate list
         for word in candidate_list
@@ -57,7 +55,8 @@ function ParseWSBData(path)
                 # if word isn't in the list, banish it to never be searched for again
                 if word in nyse_ticker_list
                     push!(stock_list, word)
-                    stock_counter_dict[word] = StockCounter(word, 1, time_array) 
+                    hit_time_hist_dict = Dict(zip(time_range, [0 for x in time_range]))
+                    stock_counter_dict[word] = StockCounter(word, 1, hit_time_hist_dict) 
                     stock_counter_dict[word].hit_time_hist[post_date] += 1
                 else
                     push!(not_stock_list, word)
@@ -67,18 +66,31 @@ function ParseWSBData(path)
     end
    
     # put into timearray struct for easy plotting
-
-    # this will need to be in a loop for each struct
     for (key, value) in sort(collect(stock_counter_dict), by=x->x[2].total_hits)
-        # BONE - something in here is what is screwing up
-        # data = (date_time= [date for date in keys(value.hit_time_hist)], 
-                            #hits=[val for val in values(value.hit_time_hist)])
-        # println(data)
-        # time_array = TimeArray(data; timestamp = :date_time, meta = "Time history")
-        # value.hit_time_hist = time_array
-        println(key,"  ", value.hit_time_hist)
+        hits = [value.hit_time_hist[date] for date in time_range]
+        data = (date_time = [date for date in time_range],
+                hits = hits)
+        time_array = TimeArray(data; timestamp = :date_time, meta = "Time history")
+        value.hit_time_hist = time_array
     end
 
+    # unpack information from WSB
+    #tickers = ["AMC", "GME", "BB", "NOK"]
+    tickers = ["GME", "AMC"]
+    WSB_labels = PlotLabels("r/WSB Mentions", "Date", "# of Mentions in Post Titles")
+    stock_labels = PlotLabels("r/WSB Mentions vs Stock Price", "Date", "AdjClose Stock Price (Log)")
+    series_list = [stock_counter_dict[ticker].hit_time_hist for ticker in tickers]
+    
+    # get stock data from API, put into list
+    stock_data = [GetStock(ticker, min_time, max_time) for ticker in tickers]
+
+    # plot stuff WSB stuff first
+    PlotWSBData(series_list, tickers, WSB_labels)  
+    # stock data
+    PlotStockData(stock_data,
+                          [string(ticker, " Stock Price") for ticker in tickers],
+                          stock_labels,
+                         )  
 end
 
 function TitleParse(title)

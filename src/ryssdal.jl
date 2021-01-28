@@ -17,5 +17,6 @@ include("yolo-parse/data_unpack.jl")
 # utilities
 include("util/stats.jl")
 include("util/plot_utils.jl")
+include("util/stock_api.jl")
 
 end # module
