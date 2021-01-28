@@ -27,7 +27,7 @@ function ARnet(symb_list::Array{Symbol};
     # get marketdata and store dataframes in a list
     pc_mdata_list = []
     mdata_list = []
-    initial_values = zeros(length(symb_list), 1)
+    initial_values = zeros(length(symb_list), p)
     for (symb_idx, symb) in enumerate(symb_list)
 
         # get percent change market data
@@ -40,7 +40,7 @@ function ARnet(symb_list::Array{Symbol};
             error("Specified date range outside of time history")
         end
         mdata = to(from(mdata, start_date), end_date)
-        initial_values[symb_idx, 1] = values(mdata[1].AdjClose)[1]
+        initial_values[symb_idx, :] = values(mdata[1:p].AdjClose)
         push!(pc_mdata_list, percentchange(mdata))
         push!(mdata_list, mdata)
     end
@@ -63,10 +63,10 @@ function ARnet(symb_list::Array{Symbol};
     for i in 1:length(mdata_list)
         sub_plot_list = [mdata_list[i], sim_mdata_list[i]]
         push!(plot_list, sub_plot_list)
-        sub_label_list = [string(symb_list[i]), string(string(symb_list[i]), " AR($p) Simulated")]
+        sub_label_list = [string(symb_list[i]), string(string(symb_list[i]), " AR($p)")]
         push!(label_list, sub_label_list)
     end
-    plot_labels = PlotLabels("AR($p) Simulation", 
+    plot_labels = PlotLabels("AR($p)", 
                              "Date", 
                              "Adjusted Close % Change")
     TimeSeriesARSimPlot(plot_list, label_list, plot_labels)
@@ -147,7 +147,7 @@ end
 function ARnetTrain(data, p; num_iters=1000)
     # set model hyper params
     learn_rate = 0.0001
-    noise_scale = 0.1
+    noise_scale = 0.001
 
     # setup model components
     #opt = Descent(learn_rate)
@@ -195,10 +195,12 @@ function ARnetReconstitute(mdata_list, w_i, c, p, initial_values)
     #   first, create empty container to populate
     #   next, get first p time series data points as seed data
     #   finally, simulate forward
-    sim_data = zeros(n, k)
+    pc_sim_data = zeros(n, k)
+    sim_data = zeros(n,k)
+    sim_data[:, 1:p] = initial_values
 
     for (mdata_idx, mdata) in enumerate(mdata_list)
-        sim_data[mdata_idx,1:p] = values(mdata[1:p].AdjClose)
+        pc_sim_data[mdata_idx,1:p] = values(mdata[1:p].AdjClose)
     end
 
     # loop through lag data
@@ -206,11 +208,12 @@ function ARnetReconstitute(mdata_list, w_i, c, p, initial_values)
 
         # get lag data and create lazy temporary container
         # do lazy weight multiplication in a for loop
-        lag_data = sim_data[:, t-p:t-1]
+        lag_data = pc_sim_data[:, t-p:t-1]
         for p_i in 1:p
-            sim_data[:, t] += w_i[p_i, :, :]*lag_data[:, p_i]
+            pc_sim_data[:, t] += w_i[p_i, :, :]*lag_data[:, p_i]
         end
-        sim_data[:, t] += c
+        pc_sim_data[:, t] += c
+        sim_data[:, t] = (pc_sim_data[:, t] .* sim_data[:, t-1])+sim_data[:, t-1]
     end
 
     # create list of time histories with data
@@ -220,7 +223,8 @@ function ARnetReconstitute(mdata_list, w_i, c, p, initial_values)
         data = (date = sim_timestamps, 
                 AdjClose = sim_data[i,:]
                 )
-        push!(sim_data_list, TimeArray(data; timestamp=:date, meta="Example"))
+        ta = TimeArray(data; timestamp=:date, meta="Example")
+        push!(sim_data_list, ta)
     end
     return sim_data_list
 end
